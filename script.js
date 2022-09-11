@@ -22,6 +22,7 @@ let listArrays = [];
 // Drag Functionality
 let draggedItem;
 let currentColumn;
+let dragging = false;
 
 // Get Arrays from localStorage if available, set default values if not
 function getSavedColumns() {
@@ -54,18 +55,27 @@ function updateSavedColumns() {
   })  
 }
 
+function filterArray(array) {
+  const filteredArray = array.filter(item => item !== null);
+  return filteredArray;
+}
+
 // Create DOM Elements for each list item
 function createItemEl(columnEl, column, item, index) {
   const listEl = document.createElement('li');
   listEl.classList.add('drag-item');
   listEl.textContent = item;
   listEl.draggable = true;
+  listEl.contentEditable = true;
+  listEl.id = index;
   listEl.setAttribute('ondragstart', 'drag(event)');
+  listEl.setAttribute('onfocusout', `updateItem(${index}, ${column})`);
   columnEl.appendChild(listEl);
 }
 
 function drag(ev) {
   draggedItem = ev.target;  
+  dragging = true;
 }
 
 function dragEnter(column) {
@@ -87,26 +97,17 @@ function drop(ev) {
 
   const parent = listColumns[currentColumn];
   parent.appendChild(draggedItem);  
+
+  draggedItem = null;
+  dragging = false;
   rebuildArrays();
 }
 
 function rebuildArrays() {
-  backlogListArray = [];
-  for (let i = 0; i < backlogList.children.length; i++) {
-    backlogListArray.push(backlogList.children[i].textContent);
-  }
-  progressListArray = [];
-  for (let i = 0; i < progressList.children.length; i++) {
-    progressListArray.push(progressList.children[i].textContent);
-  }
-  completeListArray = [];
-  for (let i = 0; i < completeList.children.length; i++) {
-    completeListArray.push(completeList.children[i].textContent);
-  }
-  onHoldListArray = [];
-  for (let i = 0; i < onHoldList.children.length; i++) {
-    onHoldListArray.push(onHoldList.children[i].textContent);
-  }
+  backlogListArray = Array.from(backlogList.children).map(i => i.textContent);
+  progressListArray = Array.from(progressList.children).map(i => i.textContent);
+  completeListArray = Array.from(completeList.children).map(i => i.textContent);
+  onHoldListArray = Array.from(onHoldList.children).map(i => i.textContent);
   updateDOM();
 }
 
@@ -122,24 +123,28 @@ function updateDOM() {
   backlogListArray.forEach((item, index) => {
     createItemEl(backlogList, 0, item, index);
   })
+  backlogListArray = filterArray(backlogListArray);
 
   // Progress Column
   progressList.textContent = '';
   progressListArray.forEach((item, index) => {
-    createItemEl(progressList, 0, item, index);
+    createItemEl(progressList, 1, item, index);
   })
+  progressListArray = filterArray(progressListArray);
 
   // Complete Column
   completeList.textContent = '';
   completeListArray.forEach((item, index) => {
-    createItemEl(completeList, 0, item, index);
+    createItemEl(completeList, 2, item, index);
   })
+  completeListArray = filterArray(completeListArray);
 
   // On Hold Column
   onHoldList.textContent = '';
   onHoldListArray.forEach((item, index) => {
-    createItemEl(onHoldList, 0, item, index);
+    createItemEl(onHoldList, 3, item, index);
   })
+  onHoldListArray = filterArray(onHoldListArray);
 
   // Run getSavedColumns only once, Update Local Storage
   updatedOnLoad = true;
@@ -165,6 +170,20 @@ function addToColumn(column) {
   selectedArray.push(itemText);
   addItems[column].textContent = '';
   updateDOM();
+}
+
+function updateItem(id, column) {
+  const selectedArray = listArrays[column];
+  const selectedColEl = listColumns[column].children;
+
+  if (!dragging) {
+    if (!selectedColEl[id].textContent) {
+      delete selectedArray[id];
+    } else {
+      selectedArray[id] = selectedColEl[id].textContent;
+    }
+    updateDOM();
+  }
 }
 
 // On Load
